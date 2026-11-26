@@ -1,0 +1,54 @@
+
+name: Dispatch QA Log Issue to Private Repo
+
+on:
+  repository_dispatch:
+    types: [create_qa_issue]
+
+jobs:
+  create-private-qa-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create QA Issue in Private Repository
+        uses: actions/github-script@v7
+        env:
+          TARGET_TOKEN: ${{ secrets.QA_PRIVATE_REPO_TOKEN }}
+        with:
+          github-token: ${{ secrets.QA_PRIVATE_REPO_TOKEN }}
+          script: |
+            if (!process.env.TARGET_TOKEN) {
+              core.setFailed("Missing required secret QA_PRIVATE_REPO_TOKEN in public runner repository.");
+              return;
+            }
+            const p = context.payload.client_payload || {};
+            const targetOwner = p.target_owner || "XAI-Medica";
+            const targetRepo = p.target_repo || "qa-testing-log";
+            const tagName = p.tag_name || "unknown";
+            const releaseUrl = p.release_url || "";
+            const authorLogin = p.author_login || "unknown";
+            const statusType = p.status_type || "Release";
+            const releaseBody = p.release_body || "_Опис змін не вказано_";
+
+            const body = [
+              "### Новий пакет для тестування (" + statusType + ")",
+              "- **Версія / Тег:** `" + tagName + "`",
+              "- **Посилання на пакет:** " + releaseUrl,
+              "- **Підготував:** @" + authorLogin,
+              "",
+              "### Опис змін",
+              releaseBody,
+              "",
+              "---",
+              "**Інструкція для тестувальника:**",
+              "1. Призначте себе у поле **Assignees** та змініть мітку на `qa:in-progress`.",
+              "2. Після завершення перевірки прикріпіть артефакти, додайте підсумковий коментар, встановіть мітку `qa:passed` або `qa:failed` та закрийте Issue."
+            ].join("
+");
+
+            await github.rest.issues.create({
+              owner: targetOwner,
+              repo: targetRepo,
+              title: "[QA] Пакет " + tagName,
+              body: body,
+              labels: ["qa:ready"]
+            });
