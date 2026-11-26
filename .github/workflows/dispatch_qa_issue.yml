@@ -1,4 +1,3 @@
-
 name: Dispatch QA Log Issue to Private Repo
 
 on:
@@ -23,32 +22,45 @@ jobs:
             const p = context.payload.client_payload || {};
             const targetOwner = p.target_owner || "XAI-Medica";
             const targetRepo = p.target_repo || "qa-testing-log";
-            const tagName = p.tag_name || "unknown";
-            const releaseUrl = p.release_url || "";
+            const version = p.version || "unknown";
+            const branchRange = p.branch_or_range || "unknown";
+            const sha = p.commit_sha || "";
+            const buildDate = p.build_date || "";
+            const gdriveFolder = p.gdrive_task_folder || "";
+            const gdriveRootUrl = p.gdrive_root_url || "https://drive.google.com/drive/folders/11S07O-WqCpy6ZhETvp9EUFbeQY0raMAq";
             const authorLogin = p.author_login || "unknown";
-            const statusType = p.status_type || "Release";
-            const releaseBody = p.release_body || "_Опис змін не вказано_";
+            const tcCount = p.test_cases_count || 0;
+            const retestCount = p.retest_items_count || 0;
+            const reqs = Array.isArray(p.requirements) ? p.requirements.join(", ") : "";
+            const risks = Array.isArray(p.risks) ? p.risks.join(", ") : "";
+            const notes = p.qa_notes || "_Нотатки не вказано_";
 
+            const titleTag = sha ? `v${version} (${branchRange} @ ${sha})` : `v${version} (${branchRange})`;
             const body = [
-              "### Новий пакет для тестування (" + statusType + ")",
-              "- **Версія / Тег:** `" + tagName + "`",
-              "- **Посилання на пакет:** " + releaseUrl,
-              "- **Підготував:** @" + authorLogin,
-              "",
-              "### Опис змін",
-              releaseBody,
-              "",
-              "---",
-              "**Інструкція для тестувальника:**",
-              "1. Призначте себе у поле **Assignees** та змініть мітку на `qa:in-progress`.",
-              "2. Після завершення перевірки прикріпіть артефакти, додайте підсумковий коментар, встановіть мітку `qa:passed` або `qa:failed` та закрийте Issue."
-            ].join("
-");
+              `### Паспорт тестової збірки REMET`,
+              `- **Версія ПЗ:** \`${version}\``,
+              `- **Гілка / Діпазон:** \`${branchRange}\``,
+              `- **Коміт / Дата збірки:** \`${sha || "n/a"}\` (${buildDate || "n/a"})`,
+              `- **Підготував:** @${authorLogin}`,
+              `- **Папка на Google Drive:** \`${gdriveFolder}\` ([Відкрити спільну папку QA](${gdriveRootUrl}))`,
+              `- **Обсяг тестів:** ${tcCount} тест-кейсів (TC-1..TC-${tcCount}) + ${retestCount} пунктів ре-тесту`,
+              `- **Вимоги (REQ):** ${reqs || "n/a"}`,
+              `- **Ризики (RISK):** ${risks || "n/a"}`,
+              ``,
+              `### Нотатки розробника`,
+              notes,
+              ``,
+              `---`,
+              `**Порядок роботи тестувальника:**`,
+              `1. Призначте себе у **Assignees** та змініть мітку на \`qa:in-progress\`.`,
+              `2. Завантажте \`Remet-Debug-App-Win32-*.7z\` та \`Remet-Debug-App-x64-*.7z\` із вказаної папки Google Drive і розпакуйте поверх \`Debug-Runtime\`.`,
+              `3. Виконайте сценарії з \`QA_TEST_INSTRUCTIONS.md\`, покладіть \`QA_REPORT_DEV.md\` (і \`QA_REPORT_QMS.md\` при PASS) у папку Google Drive, додайте підсумок у коментар, встановіть мітку \`qa:passed\` або \`qa:failed\` та закрийте Issue.`
+            ].join('\n');
 
             await github.rest.issues.create({
               owner: targetOwner,
               repo: targetRepo,
-              title: "[QA] Пакет " + tagName,
+              title: `[QA] REMET ${titleTag}`,
               body: body,
               labels: ["qa:ready"]
             });
